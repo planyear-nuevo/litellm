@@ -100,5 +100,5 @@ RUN find /app/.venv -type f -path "*/tornado/test/*" -delete && \
 EXPOSE 4000/tcp
 
 ENTRYPOINT ["docker/prod_entrypoint.sh"]
-COPY config.yaml /app/config.yaml
-CMD ["--config", "/app/config.yaml", "--port", "4000"]
+COPY config.yml /app/config.yml
+CMD ["--config", "/app/config.yml", "--port", "4000"]
