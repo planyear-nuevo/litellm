@@ -101,4 +101,4 @@ EXPOSE 4000/tcp
 
 ENTRYPOINT ["docker/prod_entrypoint.sh"]
 COPY config.yaml /app/config.yaml
-CMD ["--detailed-debug", "--config", "/app/config.yaml", "--port", "4000"]
+CMD ["--detailed_debug", "--config", "/app/config.yaml", "--port", "4000"]
