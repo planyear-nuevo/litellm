@@ -3,4 +3,4 @@ litellm_settings:
   callbacks: ["langfuse"]
 
 general_settings:
-  store_model_in_db: true
+  store_model_in_db: True
