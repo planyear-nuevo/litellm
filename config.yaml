@@ -3,11 +3,4 @@ litellm_settings:
   callbacks: ["langfuse"]
 
 general_settings:
-  store_model_in_db: true 
-
-model_list:
-  - model_name: test-model
-    litellm_params: # all params accepted by litellm.completion() - https://github.com/BerriAI/litellm/blob/9b46ec05b02d36d6e4fb5c32321e51e7f56e4a6e/litellm/types/router.py#L297
-      model: fireworks_ai/accounts/fireworks/models/gpt-oss-120b ### MODEL NAME sent to `litellm.completion()` ###
-      api_base: https://api.fireworks.ai/inference/v1
-      api_key: "os.environ/FIREWORKS_KEY" # does os.getenv("AZURE_API_KEY_EU")
+  store_model_in_db: true
