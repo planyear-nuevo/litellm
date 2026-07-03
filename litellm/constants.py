@@ -1598,6 +1598,7 @@ LITELLM_SETTINGS_SAFE_DB_OVERRIDES = [
     "public_model_groups_links",
     "cost_discount_config",
     "cost_margin_config",
+    "disable_add_user_agent_to_request_tags",
 ]
 SPECIAL_LITELLM_AUTH_TOKEN = ["ui-token"]
 DEFAULT_MANAGEMENT_OBJECT_IN_MEMORY_CACHE_TTL = int(
