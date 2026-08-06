@@ -5,3 +5,14 @@ litellm_settings:
 
 general_settings:
   store_model_in_db: true
+
+# Web search for the PlanYear agent's web_search tool: POST /v1/search/searxng-search.
+# planyear-searxng is a Render PRIVATE service (same workspace/region network as this
+# proxy; defined in planyear/infra/render.yaml + infra/searxng/) — never public. The
+# consuming API service opts in via its LITELLM_SEARCH_TOOL=searxng-search env; a missing
+# tool here only 500s /v1/search calls, chat routing is unaffected.
+search_tools:
+  - search_tool_name: searxng-search
+    litellm_params:
+      search_provider: searxng
+      api_base: http://planyear-searxng:8080
