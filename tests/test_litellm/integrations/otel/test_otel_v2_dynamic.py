@@ -1,5 +1,6 @@
 """Per-request multi-tenant credential routing (V1 parity)."""
 
+import base64
 import os
 import sys
 
@@ -40,6 +41,17 @@ def test_langfuse_dynamic_headers_need_both_keys():
         "langfuse_otel", {"langfuse_public_key": "pk", "langfuse_secret_key": "sk"}
     )
     assert headers is not None and "Authorization" in headers
+
+
+def test_langfuse_dynamic_headers_carry_v4_ingestion_version():
+    headers = dynamic_otlp_headers(
+        "langfuse_otel", {"langfuse_public_key": "pk", "langfuse_secret_key": "sk"}
+    )
+    expected_auth = "Basic " + base64.b64encode(b"pk:sk").decode()
+    assert headers == {
+        "Authorization": expected_auth,
+        "x-langfuse-ingestion-version": "4",
+    }
 
 
 def test_weave_dynamic_headers():
@@ -123,9 +135,53 @@ def test_non_participating_callback_uses_default_tracer():
 def test_dynamic_headers_applied_to_otlp_exporter_only():
     cache = _cache(
         "arize",
-        exporters=[ExporterSpec(kind="otlp_http"), ExporterSpec(kind="in_memory")],
+        exporters=[
+            ExporterSpec(kind="otlp_http", owner="arize"),
+            ExporterSpec(kind="in_memory", owner="arize"),
+        ],
     )
     new_cfg = cache._config_with_headers({"arize-space-id": "S", "api_key": "K"})
     otlp, in_mem = new_cfg.exporters
     assert otlp.headers == "arize-space-id=S,api_key=K"
     assert in_mem.headers is None  # console/in_memory left untouched
+
+
+def test_dynamic_headers_do_not_leak_to_other_owners_exporter():
+    """A tenant's Arize credentials must never be stamped onto a co-configured
+    exporter owned by a different backend (a self-hosted collector, Langfuse).
+
+    Regression for the cross-backend credential leak: ``_config_with_headers``
+    used to rewrite the headers of every OTLP exporter, so one request carrying
+    a team's Arize key clobbered the base collector's and Langfuse's headers
+    with that key.
+    """
+    cache = _cache(
+        "arize",
+        exporters=[
+            ExporterSpec(
+                kind="otlp_http",
+                endpoint="http://self-hosted-collector:4318",
+                headers="x=base-collector",
+                owner=None,
+            ),
+            ExporterSpec(
+                kind="otlp_http",
+                endpoint="https://cloud.langfuse.com/api/public/otel",
+                headers="Authorization=Basic base-langfuse",
+                owner="langfuse_otel",
+            ),
+            ExporterSpec(
+                kind="otlp_grpc",
+                endpoint="https://otlp.arize.com/v1",
+                headers="space_id=base,api_key=base",
+                owner="arize",
+            ),
+        ],
+    )
+    new_cfg = cache._config_with_headers(
+        {"arize-space-id": "TEAMX", "api_key": "TEAMX_KEY"}
+    )
+    by_owner = {e.owner: e.headers for e in new_cfg.exporters}
+    assert by_owner["arize"] == "arize-space-id=TEAMX,api_key=TEAMX_KEY"
+    assert by_owner[None] == "x=base-collector"
+    assert by_owner["langfuse_otel"] == "Authorization=Basic base-langfuse"
