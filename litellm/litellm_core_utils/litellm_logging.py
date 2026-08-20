@@ -5701,12 +5701,17 @@ def get_standard_logging_object_payload(
         if isinstance(final_response_obj, dict):
             response_model_name = final_response_obj.get("model")
 
-        # For Azure Model Router, preserve the actual model in the top-level standard
-        # logging payload only when the user has opted in.
+        # For Azure Model Router — and OpenRouter presets (`openrouter/@preset/...`),
+        # where the provider resolves the real model server-side — preserve the actual
+        # model from the response in the top-level standard logging payload.
         requested_model: Final = kwargs.get("model")
         if (
             isinstance(requested_model, str)
-            and ("model_router" in requested_model.lower() or "model-router" in requested_model.lower())
+            and (
+                "model_router" in requested_model.lower()
+                or "model-router" in requested_model.lower()
+                or "@preset/" in requested_model
+            )
             and isinstance(response_model_name, str)
             and response_model_name
         ):

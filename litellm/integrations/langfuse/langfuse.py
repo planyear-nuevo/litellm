@@ -752,7 +752,18 @@ class LangFuseLogger:
                 optional_params["system_fingerprint"] = system_fingerprint
 
             custom_llm_provider: Final = cast(str | None, kwargs.get("custom_llm_provider"))
-            model_name: Final = reconstruct_model_name(kwargs.get("model", ""), custom_llm_provider, metadata)
+            model_name = reconstruct_model_name(kwargs.get("model", ""), custom_llm_provider, metadata)
+            # OpenRouter presets (`openrouter/@preset/...`) resolve the real model
+            # server-side — the response body's `model` is the only truthful name, so
+            # the generation logs that instead of the preset slug.
+            if "@preset/" in model_name:
+                response_model = None
+                if isinstance(response_obj, dict):
+                    response_model = response_obj.get("model")
+                else:
+                    response_model = getattr(response_obj, "model", None)
+                if isinstance(response_model, str) and response_model:
+                    model_name = response_model
 
             generation_params = {
                 "name": generation_name,

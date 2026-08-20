@@ -208,17 +208,29 @@ class OpenrouterConfig(OpenAIGPTConfig):
         # OpenRouter returns cost information in the usage object when usage.include=true
         try:
             response_json: Final = raw_response.json()
+            if not hasattr(model_response, "_hidden_params"):
+                model_response._hidden_params = {}
+            if "additional_headers" not in model_response._hidden_params:
+                model_response._hidden_params["additional_headers"] = {}
+            additional_headers = model_response._hidden_params["additional_headers"]
             if "usage" in response_json and response_json["usage"]:
                 response_cost: Final = response_json["usage"].get("cost")
                 if response_cost is not None:
                     # Store cost in hidden params for the cost calculator to use
-                    if not hasattr(model_response, "_hidden_params"):
-                        model_response._hidden_params = {}
-                    if "additional_headers" not in model_response._hidden_params:
-                        model_response._hidden_params["additional_headers"] = {}
-                    model_response._hidden_params["additional_headers"]["llm_provider-x-litellm-response-cost"] = float(
+                    additional_headers["llm_provider-x-litellm-response-cost"] = float(
                         response_cost
                     )
+            # Surface the ACTUAL routed model + provider. For preset requests
+            # (`openrouter/@preset/...`) OpenRouter resolves the model server-side and
+            # only the response body says what actually ran; additional_headers is the
+            # one carrier that reaches both the HTTP response headers and the logging
+            # callbacks' hidden_params verbatim.
+            actual_model: Final = response_json.get("model")
+            if actual_model:
+                additional_headers["llm_provider-x-openrouter-model"] = actual_model
+            actual_provider: Final = response_json.get("provider")
+            if actual_provider:
+                additional_headers["llm_provider-x-openrouter-provider"] = actual_provider
         except Exception:
             # If we can't extract cost, continue without it - don't fail the response
             pass
